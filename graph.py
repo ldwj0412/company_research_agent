@@ -1,0 +1,70 @@
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.graph import END, START, StateGraph
+
+from agents.business_model import business_model_node
+from agents.fundamental import fundamental_node
+from agents.news_sentiment import news_sentiment_node
+from agents.report_writer import report_writer_node
+from state import AgentState
+
+_ticker_llm = ChatGoogleGenerativeAI(model="gemini-3.1-flash-lite", temperature=0)
+
+
+def orchestrate_node(state: AgentState) -> dict:
+    """Resolve the user's natural-language input to a stock ticker symbol."""
+    user_input = state["company_input"]
+    response = _ticker_llm.invoke([
+        SystemMessage(content=(
+            "You are a stock ticker resolver. "
+            "The user may type a company name, a sentence, or a ticker. "
+            "Reply with ONLY the stock ticker symbol (e.g. AAPL, 0700.HK, 9988.HK). "
+            "For HK-listed stocks use the numeric code with .HK suffix. "
+            "If you cannot identify the company, reply with UNKNOWN."
+        )),
+        HumanMessage(content=user_input),
+    ])
+    content = response.content
+    if isinstance(content, list):
+        content = "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in content)
+    ticker = content.strip().upper()
+
+    if ticker == "UNKNOWN" or not ticker:
+        return {"ticker": "", "error": f"Could not identify a stock ticker for: {user_input}"}
+
+    return {"ticker": ticker, "error": None}
+
+
+def route_to_agents(state: AgentState):
+    """Return a list of agent node names to run in parallel, or END on error."""
+    if state.get("error"):
+        return END
+    return ["fundamental", "business_model", "news_sentiment"]
+
+
+def build_graph():
+    g = StateGraph(AgentState)
+
+    g.add_node("orchestrate",    orchestrate_node)
+    g.add_node("fundamental",    fundamental_node)
+    g.add_node("business_model", business_model_node)
+    g.add_node("news_sentiment", news_sentiment_node)
+    g.add_node("report_writer",  report_writer_node)
+
+    g.add_edge(START, "orchestrate")
+
+    # Fan-out: conditional edges returning a list triggers parallel execution
+    g.add_conditional_edges(
+        "orchestrate",
+        route_to_agents,
+        ["fundamental", "business_model", "news_sentiment"],
+    )
+
+    # Fan-in: all 3 → report_writer (LangGraph waits for all 3 to finish)
+    g.add_edge("fundamental",    "report_writer")
+    g.add_edge("business_model", "report_writer")
+    g.add_edge("news_sentiment", "report_writer")
+
+    g.add_edge("report_writer", END)
+
+    return g.compile()
