@@ -32,12 +32,21 @@ def orchestrate_node(state: AgentState) -> dict:
     if ticker == "UNKNOWN" or not ticker:
         return {"ticker": "", "error": f"Could not identify a stock ticker for: {user_input}"}
 
-    return {"ticker": ticker, "error": None}
+    report_cache = state.get("report_cache") or {}
+    if ticker in report_cache:
+        return {
+            "ticker": ticker,
+            "report": report_cache[ticker],
+            "cache_hit": True,
+            "error": None,
+        }
+
+    return {"ticker": ticker, "cache_hit": False, "error": None}
 
 
 def route_to_agents(state: AgentState):
     """Return a list of agent node names to run in parallel, or END on error."""
-    if state.get("error"):
+    if state.get("error") or state.get("cache_hit") or state.get("report"):
         return END
     return ["fundamental", "business_model", "news_sentiment"]
 
@@ -57,7 +66,7 @@ def build_graph():
     g.add_conditional_edges(
         "orchestrate",
         route_to_agents,
-        ["fundamental", "business_model", "news_sentiment"],
+        ["fundamental", "business_model", "news_sentiment", END],
     )
 
     # Fan-in: all 3 → report_writer (LangGraph waits for all 3 to finish)

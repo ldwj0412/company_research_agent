@@ -1,4 +1,4 @@
-from typing import TypedDict, Optional
+from typing import Optional, TypedDict
 
 
 class AgentState(TypedDict):
@@ -8,4 +8,6 @@ class AgentState(TypedDict):
     business_model_data: Optional[str]
     news_data: Optional[str]
     report: Optional[str]
+    report_cache: Optional[dict[str, str]]
+    cache_hit: Optional[bool]
     error: Optional[str]
