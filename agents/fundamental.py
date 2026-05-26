@@ -3,6 +3,7 @@ from pathlib import Path
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import create_react_agent
 
+from agents.structured_output import parse_specialist_output
 from state import AgentState
 from tools.yfinance_tools import get_financial_summary, get_income_statement, get_price_history_summary
 
@@ -24,4 +25,4 @@ def fundamental_node(state: AgentState) -> dict:
     result = _agent.invoke({
         "messages": [("user", f"Analyse the financial health of {ticker}. Use all available tools.")]
     })
-    return {"fundamental_data": result["messages"][-1].content}
+    return {"fundamental_data": parse_specialist_output(result["messages"][-1].content)}

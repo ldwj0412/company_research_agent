@@ -16,7 +16,7 @@ Use this file as a step-by-step implementation guide. Finish and verify one phas
   - Startup validates `GOOGLE_API_KEY` and `TAVILY_API_KEY`.
   - Unknown ticker routing still returns a readable error.
 - [x] Phase 2: Portfolio Documentation
-- [ ] Phase 3: Structured Context
+- [x] Phase 3: Structured Context
 - [ ] Phase 4: Tests and Evaluations
 - [ ] Phase 5: Source Quality and Observability
 - [ ] Phase 6: Memory and Query Modes
@@ -25,7 +25,7 @@ Use this file as a step-by-step implementation guide. Finish and verify one phas
 
 1. [Done] Fix cache placement so repeated companies avoid unnecessary agent and API calls.
 2. [Done] Add a portfolio-quality `README.md` with setup, architecture, and sample output.
-3. Add structured intermediate outputs from the specialist agents.
+3. [Done] Add structured intermediate outputs from the specialist agents.
 4. Add tests with mocked LLM and tool calls.
 5. Add data-quality flags and source-aware synthesis.
 6. Add short-term memory for follow-up questions and session context.
@@ -87,15 +87,17 @@ Acceptance criteria:
 
 ### Phase 3: Structured Context
 
-- Introduce typed structures for specialist outputs in `state.py`.
-- Update agent nodes and prompts so they return predictable fields.
-- Update the report writer to consume structured fields and preserve missing-data warnings.
+Status: Done.
+
+- [x] Introduce typed structures for specialist outputs in `state.py`.
+- [x] Update agent nodes and prompts so they return predictable fields.
+- [x] Update the report writer to consume structured fields and preserve missing-data warnings.
 
 Acceptance criteria:
 
-- Each specialist output includes summary, important facts, risks or caveats, source references where available, and data-quality status.
-- The final report uses the structured context without losing the existing five-section report format.
-- Missing or weak data is visible to the report writer and reflected in the final report.
+- [x] Each specialist output includes summary, important facts, risks or caveats, source references where available, and data-quality status.
+- [x] The final report uses the structured context without losing the existing five-section report format.
+- [x] Missing or weak data is visible to the report writer and reflected in the final report.
 
 ### Phase 4: Tests and Evaluations
 

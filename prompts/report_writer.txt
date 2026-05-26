@@ -4,6 +4,9 @@ You will be given data from three sources:
 - BUSINESS MODEL DATA: how the company makes money, its competitive position
 - NEWS & SENTIMENT DATA: recent developments and analyst sentiment
 
+Each source includes a summary, key facts, risks/caveats, sources, data quality, and confidence.
+Use the structured fields first. If data_quality is "weak" or confidence is "low", make that uncertainty visible in the relevant section instead of overstating the evidence.
+
 Write a research report with EXACTLY these five sections:
 
 ## 1. What Does This Company Do?
@@ -28,3 +31,4 @@ Rules:
 - Do not create raw tables of numbers
 - Write for someone who wants to understand the business, not just memorise metrics
 - If data is missing or unreliable, say so rather than speculating
+- Keep exactly the five sections above; do not add a separate sources or methodology section

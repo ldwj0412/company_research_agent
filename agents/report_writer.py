@@ -3,6 +3,7 @@ from pathlib import Path
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+from agents.structured_output import format_specialist_context
 from state import AgentState
 
 _SYSTEM_PROMPT = (Path(__file__).parent.parent / "prompts" / "report_writer.txt").read_text(encoding="utf-8")
@@ -18,14 +19,11 @@ def report_writer_node(state: AgentState) -> dict:
 
     combined = f"""COMPANY: {company_input} (ticker: {ticker})
 
---- FUNDAMENTAL DATA ---
-{state.get('fundamental_data') or 'Not available.'}
+{format_specialist_context("Fundamental", state.get('fundamental_data'))}
 
---- BUSINESS MODEL DATA ---
-{state.get('business_model_data') or 'Not available.'}
+{format_specialist_context("Business model", state.get('business_model_data'))}
 
---- NEWS & SENTIMENT DATA ---
-{state.get('news_data') or 'Not available.'}
+{format_specialist_context("News & sentiment", state.get('news_data'))}
 
 Write the research report now."""
 

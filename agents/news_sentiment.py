@@ -3,6 +3,7 @@ from pathlib import Path
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import create_react_agent
 
+from agents.structured_output import parse_specialist_output
 from state import AgentState
 from tools.tavily_tools import get_tavily_tool
 
@@ -28,4 +29,4 @@ def news_sentiment_node(state: AgentState) -> dict:
             f"{company_input} (ticker: {ticker}). Cover the last 6 months."
         ))]
     })
-    return {"news_data": result["messages"][-1].content}
+    return {"news_data": parse_specialist_output(result["messages"][-1].content)}
