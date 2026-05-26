@@ -17,7 +17,7 @@ Use this file as a step-by-step implementation guide. Finish and verify one phas
   - Unknown ticker routing still returns a readable error.
 - [x] Phase 2: Portfolio Documentation
 - [x] Phase 3: Structured Context
-- [ ] Phase 4: Tests and Evaluations
+- [x] Phase 4: Tests and Evaluations
 - [ ] Phase 5: Source Quality and Observability
 - [ ] Phase 6: Memory and Query Modes
 
@@ -26,7 +26,7 @@ Use this file as a step-by-step implementation guide. Finish and verify one phas
 1. [Done] Fix cache placement so repeated companies avoid unnecessary agent and API calls.
 2. [Done] Add a portfolio-quality `README.md` with setup, architecture, and sample output.
 3. [Done] Add structured intermediate outputs from the specialist agents.
-4. Add tests with mocked LLM and tool calls.
+4. [Done] Add tests with mocked LLM and tool calls.
 5. Add data-quality flags and source-aware synthesis.
 6. Add short-term memory for follow-up questions and session context.
 7. Add observability with tracing or structured run logs.
@@ -101,15 +101,17 @@ Acceptance criteria:
 
 ### Phase 4: Tests and Evaluations
 
-- Add tests using mocked LLM and tool responses.
-- Cover graph routing, partial failures, structured-output parsing, cache behavior, and report-writer inputs.
-- Add a small evaluation set of representative companies and expected report traits.
+Status: Done.
+
+- [x] Add tests using mocked LLM and tool responses.
+- [x] Cover graph routing, partial failures, structured-output parsing, cache behavior, and report-writer inputs.
+- [x] Add a small evaluation set of representative companies and expected report traits.
 
 Acceptance criteria:
 
-- Tests run without real Gemini, Tavily, or yfinance network calls.
-- Core graph behavior is covered by deterministic tests.
-- Evaluation examples document what a good output should contain.
+- [x] Tests run without real Gemini, Tavily, or yfinance network calls.
+- [x] Core graph behavior is covered by deterministic tests.
+- [x] Evaluation examples document what a good output should contain.
 
 ### Phase 5: Source Quality and Observability
 

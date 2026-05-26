@@ -1,0 +1,45 @@
+[
+  {
+    "name": "apple",
+    "input": "Apple",
+    "expected_ticker": "AAPL",
+    "expected_traits": [
+      "uses the five-section report format",
+      "mentions iPhone, hardware, or services revenue",
+      "mentions business health using financial context",
+      "mentions valuation, regulation, China exposure, or competition as a risk"
+    ]
+  },
+  {
+    "name": "tencent",
+    "input": "Tencent",
+    "expected_ticker": "0700.HK",
+    "expected_traits": [
+      "uses the five-section report format",
+      "mentions games, social media, fintech, cloud, or ads",
+      "mentions China regulatory exposure",
+      "flags any sparse or partial HK ticker data when relevant"
+    ]
+  },
+  {
+    "name": "unknown_company",
+    "input": "Research the made-up company Zorbimax Quantum Snacks",
+    "expected_ticker": "UNKNOWN",
+    "expected_traits": [
+      "ends before specialist research agents run",
+      "returns a readable unknown-ticker error",
+      "does not invent a ticker or company facts"
+    ]
+  },
+  {
+    "name": "sparse_data_ticker",
+    "input": "0700.HK",
+    "expected_ticker": "0700.HK",
+    "expected_traits": [
+      "uses the five-section report format",
+      "preserves N/A or unavailable financial metrics instead of inventing values",
+      "surfaces weak or partial data quality when yfinance data is sparse",
+      "still uses business and news context when financial data is limited"
+    ]
+  }
+]
