@@ -17,6 +17,12 @@ _NODE_LABELS = {
     "report_writer": "Report ready",
 }
 
+_DATA_LABELS = {
+    "fundamental_data": "Financial data",
+    "business_model_data": "Business model data",
+    "news_data": "News data",
+}
+
 
 def validate_required_environment(environ: Optional[dict[str, str]] = None) -> None:
     """Fail fast when credentials needed by the graph are not configured."""
@@ -62,6 +68,25 @@ def process_query(
     result["report"] = report
     result["cache_hit"] = False
     return result
+
+
+def summarize_data_warning(result: dict) -> str:
+    weak_labels = []
+    for key, label in _DATA_LABELS.items():
+        output = result.get(key) or {}
+        if output.get("data_quality") == "weak" or output.get("confidence") == "low":
+            weak_labels.append(label)
+
+    if not weak_labels:
+        return ""
+
+    if len(weak_labels) == 1:
+        subject = weak_labels[0]
+        verb = "was"
+    else:
+        subject = ", ".join(weak_labels[:-1]) + f" and {weak_labels[-1]}"
+        verb = "were"
+    return f"[!] {subject} {verb} weak; report includes a data note."
 
 
 def main() -> int:
@@ -116,6 +141,10 @@ def main() -> int:
             print(result.get("report", "No report generated."))
             print(_DIVIDER)
             continue
+
+        warning = summarize_data_warning(result)
+        if warning:
+            print(f"{warning}\n")
 
         print(result.get("report", "No report generated."))
         print(_DIVIDER)

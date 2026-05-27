@@ -1,6 +1,11 @@
 import yfinance as yf
 from langchain_core.tools import tool
 
+from tools.retry import retry_transient
+
+
+_TOOL_RETRY_SLEEP_SECONDS = 0.5
+
 
 def _fmt(val, fmt=".2f", suffix=""):
     if val is None:
@@ -35,7 +40,14 @@ def _billions(val):
 def get_financial_summary(ticker: str) -> str:
     """Get key financial metrics for a stock ticker: valuation, profitability, balance sheet health."""
     try:
-        info = yf.Ticker(ticker).info
+        result = retry_transient(
+            lambda: yf.Ticker(ticker).info,
+            max_attempts=2,
+            sleep_seconds=_TOOL_RETRY_SLEEP_SECONDS,
+        )
+        if result.error:
+            return result.format_failure(f"financial summary for {ticker}")
+        info = result.value or {}
         name = info.get("longName") or info.get("shortName") or ticker
         lines = [
             f"Company: {name} ({ticker})",
@@ -75,7 +87,14 @@ def get_financial_summary(ticker: str) -> str:
 def get_income_statement(ticker: str) -> str:
     """Get the last 2 years of annual income statement data: revenue, gross profit, operating income, net income."""
     try:
-        fin = yf.Ticker(ticker).financials
+        result = retry_transient(
+            lambda: yf.Ticker(ticker).financials,
+            max_attempts=2,
+            sleep_seconds=_TOOL_RETRY_SLEEP_SECONDS,
+        )
+        if result.error:
+            return result.format_failure(f"income statement for {ticker}")
+        fin = result.value
         if fin is None or fin.empty:
             return f"No income statement data available for {ticker}."
 
@@ -108,7 +127,14 @@ def get_income_statement(ticker: str) -> str:
 def get_price_history_summary(ticker: str) -> str:
     """Get 52-week price range, YTD performance, and average volume for a stock ticker."""
     try:
-        hist = yf.download(ticker, period="1y", progress=False, auto_adjust=True)
+        result = retry_transient(
+            lambda: yf.download(ticker, period="1y", progress=False, auto_adjust=True),
+            max_attempts=2,
+            sleep_seconds=_TOOL_RETRY_SLEEP_SECONDS,
+        )
+        if result.error:
+            return result.format_failure(f"price history for {ticker}")
+        hist = result.value
         if hist.empty:
             return f"No price history available for {ticker}."
 

@@ -197,7 +197,7 @@ class Phase4HarnessTests(unittest.TestCase):
         _install_fake_messages()
         report_writer = importlib.import_module("agents.report_writer")
         fake_llm = FakeReportLLM()
-        report_writer._llm = fake_llm
+        report_writer._primary = fake_llm
 
         output = {
             "summary": "Strong business.",

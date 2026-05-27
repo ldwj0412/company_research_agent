@@ -1,4 +1,5 @@
-from typing import Literal, Optional, TypedDict
+from operator import add
+from typing import Annotated, Literal, Optional, TypedDict
 
 
 DataQuality = Literal["good", "partial", "weak"]
@@ -15,6 +16,17 @@ class SpecialistOutput(TypedDict):
     raw_text: str
 
 
+class RunEvent(TypedDict):
+    node: str
+    status: str
+    latency_ms: int
+    error: str
+    error_category: str
+    model: str
+    fallback_model: str
+    fallback_used: bool
+
+
 class AgentState(TypedDict):
     company_input: str           # raw user input e.g. "Apple" or "help me research Tencent"
     ticker: str                  # resolved ticker e.g. "AAPL", "0700.HK"
@@ -25,3 +37,4 @@ class AgentState(TypedDict):
     report_cache: Optional[dict[str, str]]
     cache_hit: Optional[bool]
     error: Optional[str]
+    run_events: Annotated[list[RunEvent], add]

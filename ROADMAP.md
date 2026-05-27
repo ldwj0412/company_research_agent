@@ -18,7 +18,7 @@ Use this file as a step-by-step implementation guide. Finish and verify one phas
 - [x] Phase 2: Portfolio Documentation
 - [x] Phase 3: Structured Context
 - [x] Phase 4: Tests and Evaluations
-- [ ] Phase 5: Source Quality and Observability
+- [x] Phase 5: Source Quality and Observability
 - [ ] Phase 6: Memory and Query Modes
 
 ## Priority Order
@@ -27,9 +27,9 @@ Use this file as a step-by-step implementation guide. Finish and verify one phas
 2. [Done] Add a portfolio-quality `README.md` with setup, architecture, and sample output.
 3. [Done] Add structured intermediate outputs from the specialist agents.
 4. [Done] Add tests with mocked LLM and tool calls.
-5. Add data-quality flags and source-aware synthesis.
+5. [Done] Add data-quality flags and source-aware synthesis.
 6. Add short-term memory for follow-up questions and session context.
-7. Add observability with tracing or structured run logs.
+7. [Done] Add observability with tracing or structured run logs.
 8. Add long-term memory for stable preferences, watchlists, and report history.
 
 ## Context Engineering Checklist
@@ -115,15 +115,17 @@ Acceptance criteria:
 
 ### Phase 5: Source Quality and Observability
 
-- Add source filtering or ranking before synthesis.
-- Add tracing or structured run logs for graph nodes, tool calls, latency, and errors.
-- Record when fallback models are used.
+Status: Done.
+
+- [x] Add source filtering or ranking before synthesis.
+- [x] Add tracing or structured run logs for graph nodes, tool calls, latency, and errors.
+- [x] Record when fallback models are used.
 
 Acceptance criteria:
 
-- Search-based claims can be traced back to source URLs.
-- A failed or slow agent is visible in logs or traces.
-- Runs are easier to debug than reading only the final report.
+- [x] Search-based claims can be traced back to source URLs.
+- [x] A failed or slow agent is visible in logs or traces.
+- [x] Runs are easier to debug than reading only the final report.
 
 ### Phase 6: Memory and Query Modes
 

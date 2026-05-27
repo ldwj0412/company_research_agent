@@ -3,7 +3,8 @@ from pathlib import Path
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import create_react_agent
 
-from agents.structured_output import parse_specialist_output
+from agents.structured_output import apply_tool_error_context, parse_specialist_output
+from observability import tool_events_from_react_result
 from state import AgentState
 from tools.tavily_tools import get_tavily_tool
 
@@ -29,4 +30,9 @@ def news_sentiment_node(state: AgentState) -> dict:
             f"{company_input} (ticker: {ticker}). Cover the last 6 months."
         ))]
     })
-    return {"news_data": parse_specialist_output(result["messages"][-1].content)}
+    events = tool_events_from_react_result("news_sentiment", result)
+    output = parse_specialist_output(result["messages"][-1].content)
+    return {
+        "news_data": apply_tool_error_context(output, events),
+        "run_events": events,
+    }

@@ -1,6 +1,7 @@
 import json
 from typing import Any, Optional
 
+from source_quality import format_source_quality, format_traceable_sources
 from state import SpecialistOutput
 
 _VALID_DATA_QUALITY = {"good", "partial", "weak"}
@@ -60,8 +61,32 @@ Risks/Caveats:
 Sources:
 {_format_list(output["sources"])}
 
+Source quality:
+{format_source_quality(output["sources"])}
+
+Traceable sources:
+{format_traceable_sources(output["sources"])}
+
 Raw fallback/context:
 {output["raw_text"] or "N/A"}"""
+
+
+def apply_tool_error_context(output: SpecialistOutput, events: list[dict]) -> SpecialistOutput:
+    """Downgrade specialist confidence when tools returned wrapped errors."""
+    tool_errors = [event for event in events if event.get("status") == "error"]
+    if not tool_errors:
+        return output
+
+    risks = list(output["risks"])
+    first_error = str(tool_errors[0].get("error", "tool failure"))
+    risks.insert(0, f"Tool failure limited this analysis: {first_error[:250]}")
+
+    return {
+        **output,
+        "risks": risks,
+        "data_quality": "weak",
+        "confidence": "low",
+    }
 
 
 def _fallback_output(raw_text: str) -> SpecialistOutput:

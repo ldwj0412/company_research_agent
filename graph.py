@@ -6,9 +6,13 @@ from agents.business_model import business_model_node
 from agents.fundamental import fundamental_node
 from agents.news_sentiment import news_sentiment_node
 from agents.report_writer import report_writer_node
+from agents.structured_output import parse_specialist_output
+from observability import trace_node
 from state import AgentState
 
-_ticker_llm = ChatGoogleGenerativeAI(model="gemini-3.1-flash-lite", temperature=0)
+_TICKER_MODEL = "gemini-3.1-flash-lite"
+_FALLBACK_MODEL = "gemini-2.5-flash-lite"
+_ticker_llm = ChatGoogleGenerativeAI(model=_TICKER_MODEL, temperature=0)
 
 
 def orchestrate_node(state: AgentState) -> dict:
@@ -54,10 +58,54 @@ def route_to_agents(state: AgentState):
 def build_graph():
     g = StateGraph(AgentState)
 
-    g.add_node("orchestrate",    orchestrate_node)
-    g.add_node("fundamental",    fundamental_node)
-    g.add_node("business_model", business_model_node)
-    g.add_node("news_sentiment", news_sentiment_node)
+    g.add_node(
+        "orchestrate",
+        trace_node(
+            "orchestrate",
+            orchestrate_node,
+            fallback_output=lambda exc, state: {
+                "ticker": "",
+                "error": f"Could not resolve ticker: {exc}",
+            },
+            model=_TICKER_MODEL,
+        ),
+    )
+    g.add_node(
+        "fundamental",
+        trace_node(
+            "fundamental",
+            fundamental_node,
+            fallback_output=lambda exc, state: {
+                "fundamental_data": parse_specialist_output(f"Fundamental agent failed: {exc}")
+            },
+            model=_TICKER_MODEL,
+            fallback_model=_FALLBACK_MODEL,
+        ),
+    )
+    g.add_node(
+        "business_model",
+        trace_node(
+            "business_model",
+            business_model_node,
+            fallback_output=lambda exc, state: {
+                "business_model_data": parse_specialist_output(f"Business model agent failed: {exc}")
+            },
+            model=_TICKER_MODEL,
+            fallback_model=_FALLBACK_MODEL,
+        ),
+    )
+    g.add_node(
+        "news_sentiment",
+        trace_node(
+            "news_sentiment",
+            news_sentiment_node,
+            fallback_output=lambda exc, state: {
+                "news_data": parse_specialist_output(f"News sentiment agent failed: {exc}")
+            },
+            model=_TICKER_MODEL,
+            fallback_model=_FALLBACK_MODEL,
+        ),
+    )
     g.add_node("report_writer",  report_writer_node)
 
     g.add_edge(START, "orchestrate")
