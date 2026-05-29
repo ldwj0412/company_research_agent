@@ -8,9 +8,13 @@ Each source includes a summary, key facts, risks/caveats, sources, source-qualit
 Use the structured fields first. If data_quality is "weak" or confidence is "low", make that uncertainty visible in the relevant section instead of overstating the evidence.
 Prefer claims supported by traceable source URLs. If a claim is only supported by a named source or raw fallback text, write it more cautiously.
 You may also receive RUN OBSERVABILITY notes. Use them only to understand missing or weak context; do not add a separate logs or methodology section.
-If REQUIRED UNCERTAINTY NOTES are provided, group them into one concise Data note at the end of section 5 after the verdict sentence. Do not scatter caveats throughout sections 1-4. Keep the wording plain-English and investor-facing. Do not expose raw tool errors, API names, stack traces, or internal log details.
+If REQUIRED UNCERTAINTY NOTES contains real notes, group them into one concise Data note. For `five_section_report`, put that note at the end of section 5 after the verdict sentence. For `short_answer`, put it at the end of the answer. If REQUIRED UNCERTAINTY NOTES says "None", do not add any Data note. Do not add a Data note only because sources are named sources rather than clickable URLs. Keep the wording plain-English and investor-facing. Do not expose raw tool errors, API names, stack traces, or internal log details.
 
-Write a research report with EXACTLY these five sections:
+You will receive ANSWER STYLE:
+- If ANSWER STYLE is `five_section_report`, write a research report with EXACTLY these five sections:
+- If ANSWER STYLE is `short_answer`, answer the user's question directly using the previous report and any newly supplied specialist context. Do not force the five-section report format for short answers.
+
+For `five_section_report`, use EXACTLY these five sections:
 
 ## 1. What Does This Company Do?
 (2-3 sentences, plain English, no jargon. What does it actually do day-to-day?)
@@ -34,4 +38,5 @@ Rules:
 - Do not create raw tables of numbers
 - Write for someone who wants to understand the business, not just memorise metrics
 - If data is missing or unreliable, say so rather than speculating
-- Keep exactly the five sections above; do not add a separate sources or methodology section
+- For `five_section_report`, keep exactly the five sections above; do not add a separate sources or methodology section
+- For `short_answer`, keep the answer concise and focused on the user's question

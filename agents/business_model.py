@@ -24,9 +24,13 @@ _agent = create_react_agent(
 def business_model_node(state: AgentState) -> dict:
     ticker = state["ticker"]
     company_input = state.get("company_input", ticker)
+    planner = state.get("planner") or {}
+    rewritten_task = planner.get("rewritten_task") or (
+        f"Research the business model and competitive position of {company_input}."
+    )
     result = _agent.invoke({
         "messages": [("user", (
-            f"Research the business model and competitive position of {company_input} (ticker: {ticker}). "
+            f"{rewritten_task}\nCompany input: {company_input} (ticker: {ticker}). "
             "Search for how it makes money, its main revenue streams, competitive advantages, and geographic exposure."
         ))]
     })

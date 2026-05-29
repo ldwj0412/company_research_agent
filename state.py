@@ -4,6 +4,16 @@ from typing import Annotated, Literal, Optional, TypedDict
 
 DataQuality = Literal["good", "partial", "weak"]
 Confidence = Literal["high", "medium", "low"]
+AnswerStyle = Literal["five_section_report", "short_answer"]
+
+
+class PlannerOutput(TypedDict):
+    intent: str
+    target_company: str
+    reuse_last_ticker: bool
+    required_agents: list[str]
+    answer_style: AnswerStyle
+    rewritten_task: str
 
 
 class SpecialistOutput(TypedDict):
@@ -35,6 +45,9 @@ class AgentState(TypedDict):
     news_data: Optional[SpecialistOutput]
     report: Optional[str]
     report_cache: Optional[dict[str, str]]
+    previous_report: Optional[str]
+    planner: Optional[PlannerOutput]
+    session_memory: Optional[dict]
     cache_hit: Optional[bool]
     error: Optional[str]
     run_events: Annotated[list[RunEvent], add]

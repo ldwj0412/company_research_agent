@@ -165,6 +165,35 @@ class ToolRetryTests(unittest.TestCase):
         self.assertEqual(calls["count"], 2)
         self.assertIn("Company: Apple Inc. (AAPL)", output)
 
+    def test_yfinance_price_history_handles_single_ticker_multiindex_download(self):
+        import pandas as pd
+
+        yf_module = ModuleType("yfinance")
+        dates = pd.to_datetime(["2026-01-02", "2026-01-03", "2026-01-04"])
+        yf_module.download = lambda *args, **kwargs: pd.DataFrame(
+            {
+                ("Close", "AAPL"): [100.0, 110.0, 120.0],
+                ("Volume", "AAPL"): [1_000_000, 2_000_000, 3_000_000],
+            },
+            index=dates,
+        )
+        yf_module.Ticker = lambda ticker: None
+        sys.modules["yfinance"] = yf_module
+        _install_fake_langchain_tool()
+        sys.modules.pop("tools.yfinance_tools", None)
+
+        try:
+            yfinance_tools = importlib.import_module("tools.yfinance_tools")
+            yfinance_tools._TOOL_RETRY_SLEEP_SECONDS = 0
+            output = yfinance_tools.get_price_history_summary.invoke({"ticker": "AAPL"})
+        finally:
+            sys.modules.pop("tools.yfinance_tools", None)
+            sys.modules.pop("langchain_core.tools", None)
+            sys.modules.pop("yfinance", None)
+
+        self.assertIn("Current Price:  $120.00", output)
+        self.assertIn("Avg Daily Vol:  2,000,000 shares", output)
+
 
 if __name__ == "__main__":
     unittest.main()

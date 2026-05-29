@@ -138,13 +138,14 @@ def get_price_history_summary(ticker: str) -> str:
         if hist.empty:
             return f"No price history available for {ticker}."
 
-        close = hist["Close"].squeeze()
+        close = _select_history_series(hist, "Close", ticker)
+        volume = _select_history_series(hist, "Volume", ticker)
         high = float(close.max())
         low = float(close.min())
         current = float(close.iloc[-1])
         start_of_year = close[close.index.year == close.index[-1].year].iloc[0]
         ytd_pct = (current - float(start_of_year)) / float(start_of_year) * 100
-        avg_vol = float(hist["Volume"].mean())
+        avg_vol = float(volume.mean())
 
         lines = [
             f"Current Price:  ${current:.2f}",
@@ -156,3 +157,12 @@ def get_price_history_summary(ticker: str) -> str:
         return "\n".join(lines)
     except Exception as e:
         return f"Error fetching price history for {ticker}: {e}"
+
+
+def _select_history_series(hist, field: str, ticker: str):
+    column = hist[field]
+    if hasattr(column, "columns"):
+        if ticker in column.columns:
+            return column[ticker].squeeze()
+        return column.iloc[:, 0].squeeze()
+    return column.squeeze()

@@ -1,4 +1,5 @@
 import os
+from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 from dotenv import load_dotenv
@@ -24,6 +25,22 @@ _DATA_LABELS = {
 }
 
 
+@dataclass
+class SessionMemory:
+    last_ticker: Optional[str] = None
+    last_company_input: Optional[str] = None
+    last_report: Optional[str] = None
+    recent_queries: list[dict] = field(default_factory=list)
+
+    def to_state(self) -> dict:
+        return {
+            "last_ticker": self.last_ticker,
+            "last_company_input": self.last_company_input,
+            "last_report": self.last_report,
+            "recent_queries": self.recent_queries[-5:],
+        }
+
+
 def validate_required_environment(environ: Optional[dict[str, str]] = None) -> None:
     """Fail fast when credentials needed by the graph are not configured."""
     values = os.environ if environ is None else environ
@@ -40,11 +57,16 @@ def process_query(
     graph,
     user_input: str,
     cache: dict[str, str],
+    memory: Optional[SessionMemory] = None,
     on_update: Optional[Callable[[str, dict], None]] = None,
 ) -> dict:
     """Run one query and update the session cache only after fresh reports."""
     result: dict = {}
-    initial_state = {"company_input": user_input, "report_cache": cache}
+    initial_state = {
+        "company_input": user_input,
+        "report_cache": cache,
+        "session_memory": memory.to_state() if memory else {},
+    }
 
     for update in graph.stream(initial_state, stream_mode="updates"):
         for node_name, node_output in update.items():
@@ -60,14 +82,38 @@ def process_query(
     inferred_cache_hit = bool(ticker and ticker in cache and result.get("report") == cache[ticker])
     if result.get("cache_hit") or inferred_cache_hit:
         result["cache_hit"] = True
+        if memory:
+            update_session_memory(memory, result, user_input)
         return result
 
     report = result.get("report", "No report generated.")
-    if ticker:
+    planner = result.get("planner") or {}
+    if ticker and planner.get("answer_style", "five_section_report") == "five_section_report":
         cache[ticker] = report
     result["report"] = report
     result["cache_hit"] = False
+    if memory:
+        update_session_memory(memory, result, user_input)
     return result
+
+
+def update_session_memory(memory: SessionMemory, result: dict, user_input: str) -> None:
+    if result.get("error"):
+        return
+
+    ticker = result.get("ticker")
+    report = result.get("report")
+    if ticker:
+        memory.last_ticker = ticker
+    if report:
+        memory.last_report = report
+    memory.last_company_input = user_input
+    memory.recent_queries.append({
+        "input": user_input,
+        "ticker": ticker or "",
+        "intent": (result.get("planner") or {}).get("intent", ""),
+    })
+    del memory.recent_queries[:-5]
 
 
 def summarize_data_warning(result: dict) -> str:
@@ -100,6 +146,7 @@ def main() -> int:
 
     graph = build_graph()
     cache: dict[str, str] = {}  # ticker -> report, lives for this session
+    memory = SessionMemory()
 
     print("=" * 60)
     print("  Company Research Agent")
@@ -128,7 +175,7 @@ def main() -> int:
 
         # Stream node-by-node so the user sees progress as each agent finishes.
         print()
-        result = process_query(graph, user_input, cache, on_update=print_progress)
+        result = process_query(graph, user_input, cache, memory=memory, on_update=print_progress)
         print()
 
         if result.get("error"):

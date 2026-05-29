@@ -23,8 +23,10 @@ _agent = create_react_agent(
 
 def fundamental_node(state: AgentState) -> dict:
     ticker = state["ticker"]
+    planner = state.get("planner") or {}
+    rewritten_task = planner.get("rewritten_task") or f"Analyse the financial health of {ticker}."
     result = _agent.invoke({
-        "messages": [("user", f"Analyse the financial health of {ticker}. Use all available tools.")]
+        "messages": [("user", f"{rewritten_task}\nTicker: {ticker}. Use all available financial tools.")]
     })
     events = tool_events_from_react_result("fundamental", result)
     output = parse_specialist_output(result["messages"][-1].content)

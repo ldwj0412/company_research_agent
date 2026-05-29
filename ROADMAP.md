@@ -19,7 +19,7 @@ Use this file as a step-by-step implementation guide. Finish and verify one phas
 - [x] Phase 3: Structured Context
 - [x] Phase 4: Tests and Evaluations
 - [x] Phase 5: Source Quality and Observability
-- [ ] Phase 6: Memory and Query Modes
+- [x] Phase 6: Short-Term Memory and Conversational Routing
 
 ## Priority Order
 
@@ -28,14 +28,14 @@ Use this file as a step-by-step implementation guide. Finish and verify one phas
 3. [Done] Add structured intermediate outputs from the specialist agents.
 4. [Done] Add tests with mocked LLM and tool calls.
 5. [Done] Add data-quality flags and source-aware synthesis.
-6. Add short-term memory for follow-up questions and session context.
+6. [Done] Add short-term memory for follow-up questions and session context.
 7. [Done] Add observability with tracing or structured run logs.
-8. Add long-term memory for stable preferences, watchlists, and report history.
+8. Later add long-term memory for stable preferences, watchlists, and report history.
 
 ## Context Engineering Checklist
 
 - Structured agent outputs: each specialist agent should return fields such as `summary`, `key_facts`, `risks`, `sources`, `data_quality`, and `confidence`, instead of only unstructured prose.
-- User intent fields: carry stable intent through `AgentState`, such as `research_focus`, `time_horizon`, `report_type`, and comparison targets when supported.
+- User intent fields: carry stable intent through `AgentState`, such as planner intent, rewritten task, selected specialist agents, and answer style.
 - Source-aware synthesis: business and news agents should preserve source URLs, and the report writer should avoid claims that are not supported by agent evidence.
 - Data-quality flags: financial and search agents should mark their data as `good`, `partial`, or `weak`, especially when yfinance returns sparse HK ticker data.
 - Context compression: filter duplicate, stale, low-quality, or off-topic Tavily results before they become report-writer context.
@@ -51,7 +51,7 @@ Use this file as a step-by-step implementation guide. Finish and verify one phas
 - Per-agent error handling: allow final report generation with partial data when one specialist agent fails, and surface warnings clearly.
 - Observability: add LangSmith tracing or structured logs for node start/end, latency, tool calls, failures, and selected model fallback.
 - Evaluation examples: keep sample inputs and expected report traits for Apple, Tencent, an unknown company, and a ticker with sparse data.
-- CLI modes: consider `--refresh`, `--no-cache`, `--mode full/news/risk/business`, and `--ticker` to skip ticker resolution.
+- Conversational routing: use a constrained planner to decide whether a query needs a full report, a targeted specialist run, or a short answer from session context.
 - Config layer: centralize model names, Tavily result counts, news time window, cache behavior, and tracing toggles.
 - Environment validation: fail fast with readable messages when `GOOGLE_API_KEY` or `TAVILY_API_KEY` is missing.
 
@@ -127,17 +127,21 @@ Acceptance criteria:
 - [x] A failed or slow agent is visible in logs or traces.
 - [x] Runs are easier to debug than reading only the final report.
 
-### Phase 6: Memory and Query Modes
+### Phase 6: Short-Term Memory and Conversational Routing
 
-- Add short-term memory for follow-up questions, last ticker, last report, and session preferences.
-- Add simple CLI modes such as full report, news-only, risk-focused, or business-model-focused.
-- Later add durable watchlist and user preference memory.
+Status: Done.
+
+- [x] Add short-term memory for follow-up questions, last ticker, last report, and recent user intent.
+- [x] Add a constrained planner that parses user intent, selects specialist agents, and rewrites the downstream task.
+- [x] Route conversational follow-ups through the previous ticker/report when the user omits the company.
+- [x] Do not add CLI modes; keep the interface conversational.
+- [ ] Later add durable watchlist and user preference memory.
 
 Acceptance criteria:
 
-- Follow-up questions can reuse the previous ticker when the user omits it.
-- Mode selection changes which agents run or how the report is written.
-- Long-term memory stores stable preferences only, not stale market facts.
+- [x] Follow-up questions can reuse the previous ticker when the user omits it.
+- [x] Planner output controls which specialist agents run and whether the writer returns a full report or short answer.
+- [x] Long-term memory is not implemented yet; stale market facts are not persisted.
 
 ## Implementation Rule
 

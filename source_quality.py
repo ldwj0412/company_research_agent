@@ -56,8 +56,8 @@ def format_source_quality(sources: list[str]) -> str:
         )
 
     return (
-        f"{len(ranked)} named source(s), but no traceable URLs. "
-        "Use this context cautiously and avoid unsupported precise claims."
+        f"{len(ranked)} named source(s) provided. "
+        "Use named sources as provenance; do not treat missing URLs alone as weak evidence."
     )
 
 
@@ -68,7 +68,7 @@ def format_traceable_sources(sources: list[str]) -> str:
         if item["traceability"] == "url"
     ]
     if not traceable_sources:
-        return "- None provided."
+        return "- No URL sources provided; named sources above may still be usable."
     return "\n".join(f"- {source}" for source in traceable_sources)
 
 

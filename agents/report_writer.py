@@ -18,14 +18,19 @@ _fallback = ChatGoogleGenerativeAI(model=_FALLBACK_MODEL, temperature=0.3)
 def report_writer_node(state: AgentState) -> dict:
     ticker = state.get("ticker", "")
     company_input = state.get("company_input", ticker)
+    planner = state.get("planner") or {}
+    answer_style = planner.get("answer_style", "five_section_report")
 
     combined = f"""COMPANY: {company_input} (ticker: {ticker})
+USER QUESTION: {company_input}
+ANSWER STYLE: {answer_style}
+PLANNER INTENT: {planner.get("intent", "full_report")}
+REWRITTEN TASK: {planner.get("rewritten_task", company_input)}
 
-{format_specialist_context("Fundamental", state.get('fundamental_data'))}
+--- PREVIOUS SESSION REPORT ---
+{state.get("previous_report") or "None available."}
 
-{format_specialist_context("Business model", state.get('business_model_data'))}
-
-{format_specialist_context("News & sentiment", state.get('news_data'))}
+{_format_routed_specialist_context(state)}
 
 --- REQUIRED UNCERTAINTY NOTES ---
 {_format_uncertainty_notes(state)}
@@ -106,22 +111,58 @@ Data note: Report generation failed after both the primary and fallback models w
 
 def _format_uncertainty_notes(state: AgentState) -> str:
     notes = []
-    for label, output in [
-        ("Fundamental", state.get("fundamental_data")),
-        ("Business model", state.get("business_model_data")),
-        ("News & sentiment", state.get("news_data")),
+    planner = state.get("planner") or {}
+    required_agents = planner.get("required_agents")
+    include_missing = planner.get("answer_style", "five_section_report") == "five_section_report"
+    if required_agents is None:
+        required_agents = ["fundamental", "business_model", "news_sentiment"]
+
+    for agent_name, label, output in [
+        ("fundamental", "Fundamental", state.get("fundamental_data")),
+        ("business_model", "Business model", state.get("business_model_data")),
+        ("news_sentiment", "News & sentiment", state.get("news_data")),
     ]:
+        if agent_name not in required_agents and not include_missing:
+            continue
         note = _uncertainty_note(label, output)
         if note:
             notes.append(note)
 
     if not notes:
-        return "- None."
+        return "- None. Do not add a Data note."
+
+    if planner.get("answer_style", "five_section_report") == "short_answer":
+        return (
+            "Group these notes into one concise Data note at the end of the answer. "
+            "Do not expose raw tool errors.\n"
+            + "\n".join(notes)
+        )
+
     return (
         "Group these notes into one concise Data note at the end of section 5, after the verdict sentence. "
         "Do not repeat these caveats throughout sections 1-4. Do not add a sixth section or expose raw tool errors.\n"
         + "\n".join(notes)
     )
+
+
+def _format_routed_specialist_context(state: AgentState) -> str:
+    planner = state.get("planner") or {}
+    answer_style = planner.get("answer_style", "five_section_report")
+    required_agents = planner.get("required_agents")
+
+    sections = []
+    for agent_name, label, key in [
+        ("fundamental", "Fundamental", "fundamental_data"),
+        ("business_model", "Business model", "business_model_data"),
+        ("news_sentiment", "News & sentiment", "news_data"),
+    ]:
+        if answer_style == "short_answer" and required_agents is not None and agent_name not in required_agents:
+            continue
+        sections.append(format_specialist_context(label, state.get(key)))
+
+    if not sections:
+        return "--- SPECIALIST DATA ---\nNo new specialist data was requested for this follow-up."
+    return "\n\n".join(sections)
 
 
 def _uncertainty_note(

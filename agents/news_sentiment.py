@@ -24,10 +24,13 @@ _agent = create_react_agent(
 def news_sentiment_node(state: AgentState) -> dict:
     ticker = state["ticker"]
     company_input = state.get("company_input", ticker)
+    planner = state.get("planner") or {}
+    rewritten_task = planner.get("rewritten_task") or (
+        f"Find recent news, management changes, regulatory risks, and analyst sentiment for {company_input}."
+    )
     result = _agent.invoke({
         "messages": [("user", (
-            f"Find recent news, management changes, regulatory risks, and analyst sentiment for "
-            f"{company_input} (ticker: {ticker}). Cover the last 6 months."
+            f"{rewritten_task}\nCompany input: {company_input} (ticker: {ticker}). Cover the last 6 months."
         ))]
     })
     events = tool_events_from_react_result("news_sentiment", result)

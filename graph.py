@@ -5,6 +5,7 @@ from langgraph.graph import END, START, StateGraph
 from agents.business_model import business_model_node
 from agents.fundamental import fundamental_node
 from agents.news_sentiment import news_sentiment_node
+from agents.planner import planner_node
 from agents.report_writer import report_writer_node
 from agents.structured_output import parse_specialist_output
 from observability import trace_node
@@ -18,6 +19,23 @@ _ticker_llm = ChatGoogleGenerativeAI(model=_TICKER_MODEL, temperature=0)
 def orchestrate_node(state: AgentState) -> dict:
     """Resolve the user's natural-language input to a stock ticker symbol."""
     user_input = state["company_input"]
+    planner = state.get("planner") or {}
+    session_memory = state.get("session_memory") or {}
+    report_cache = state.get("report_cache") or {}
+
+    answer_style = planner.get("answer_style", "five_section_report")
+    if planner.get("reuse_last_ticker") and session_memory.get("last_ticker"):
+        ticker = str(session_memory["last_ticker"]).upper()
+        previous_report = report_cache.get(ticker) or session_memory.get("last_report")
+        return {
+            "ticker": ticker,
+            "previous_report": previous_report,
+            "planner": planner,
+            "cache_hit": False,
+            "error": None,
+        }
+
+    query_for_ticker = planner.get("target_company") or user_input
     response = _ticker_llm.invoke([
         SystemMessage(content=(
             "You are a stock ticker resolver. "
@@ -26,7 +44,7 @@ def orchestrate_node(state: AgentState) -> dict:
             "For HK-listed stocks use the numeric code with .HK suffix. "
             "If you cannot identify the company, reply with UNKNOWN."
         )),
-        HumanMessage(content=user_input),
+        HumanMessage(content=query_for_ticker),
     ])
     content = response.content
     if isinstance(content, list):
@@ -36,28 +54,58 @@ def orchestrate_node(state: AgentState) -> dict:
     if ticker == "UNKNOWN" or not ticker:
         return {"ticker": "", "error": f"Could not identify a stock ticker for: {user_input}"}
 
-    report_cache = state.get("report_cache") or {}
-    if ticker in report_cache:
+    if ticker in report_cache and answer_style == "five_section_report":
         return {
             "ticker": ticker,
             "report": report_cache[ticker],
+            "planner": planner,
             "cache_hit": True,
             "error": None,
         }
 
-    return {"ticker": ticker, "cache_hit": False, "error": None}
+    return {
+        "ticker": ticker,
+        "previous_report": report_cache.get(ticker),
+        "planner": planner,
+        "cache_hit": False,
+        "error": None,
+    }
 
 
 def route_to_agents(state: AgentState):
     """Return a list of agent node names to run in parallel, or END on error."""
     if state.get("error") or state.get("cache_hit") or state.get("report"):
         return END
-    return ["fundamental", "business_model", "news_sentiment"]
+    planner = state.get("planner") or {}
+    required_agents = planner.get("required_agents")
+    if required_agents is None:
+        return ["fundamental", "business_model", "news_sentiment"]
+    if not required_agents:
+        return "report_writer"
+    return required_agents
 
 
 def build_graph():
     g = StateGraph(AgentState)
 
+    g.add_node(
+        "planner",
+        trace_node(
+            "planner",
+            planner_node,
+            fallback_output=lambda exc, state: {
+                "planner": {
+                    "intent": "full_report",
+                    "target_company": state.get("company_input", ""),
+                    "reuse_last_ticker": False,
+                    "required_agents": ["fundamental", "business_model", "news_sentiment"],
+                    "answer_style": "five_section_report",
+                    "rewritten_task": state.get("company_input", ""),
+                }
+            },
+            model=_TICKER_MODEL,
+        ),
+    )
     g.add_node(
         "orchestrate",
         trace_node(
@@ -108,13 +156,14 @@ def build_graph():
     )
     g.add_node("report_writer",  report_writer_node)
 
-    g.add_edge(START, "orchestrate")
+    g.add_edge(START, "planner")
+    g.add_edge("planner", "orchestrate")
 
     # Fan-out: conditional edges returning a list triggers parallel execution
     g.add_conditional_edges(
         "orchestrate",
         route_to_agents,
-        ["fundamental", "business_model", "news_sentiment", END],
+        ["fundamental", "business_model", "news_sentiment", "report_writer", END],
     )
 
     # Fan-in: all 3 → report_writer (LangGraph waits for all 3 to finish)
