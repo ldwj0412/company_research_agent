@@ -17,35 +17,60 @@ This is an AI-engineering portfolio project focused on multi-agent orchestration
 
 ## Architecture
 
-Runtime topology:
+Current runtime topology:
 
 ```text
-START
-  |
-  v
-orchestrate
-  |
-  |-- if unknown ticker -> END with readable error
-  |-- if cached ticker  -> END with cached report
-  |
-  v
-[fundamental, business_model, news_sentiment]
-  |
-  v
-report_writer
-  |
-  v
-END
+                    +--------------+
+                    |   User CLI   |
+                    +------+-------+
+                           |
+                           v
+                    +--------------+
+                    |   Planner    |
+                    | decide intent|
+                    | choose agents|
+                    +------+-------+
+                           |
+                           v
+                    +--------------+
+                    | Orchestrator |
+                    |resolve ticker|
+                    | check cache  |
+                    +------+-------+
+                           |
+              +------------+------------+
+              |            |            |
+              v            v            v
+       +------------+ +------------+ +------------+
+       | Financials | | Business   | | News       |
+       | yfinance   | | Tavily     | | Tavily     |
+       +-----+------+ +-----+------+ +-----+------+
+             |              |              |
+             +--------------+--------------+
+                            |
+                            v
+                    +--------------+
+                    |Report Writer |
+                    | synthesize   |
+                    +------+-------+
+                           |
+                           v
+                    +--------------+
+                    | Final Answer |
+                    +--------------+
 ```
 
 Main flow:
 
-1. `main.py` starts the CLI, validates required environment variables, streams graph updates, and keeps the session cache.
-2. `graph.py` resolves the ticker and uses LangGraph conditional routing for error handling, cache hits, and parallel fan-out.
-3. `agents/fundamental.py` uses yfinance tools to summarize financial health.
-4. `agents/business_model.py` uses Tavily search to research revenue model, moat, competitors, and geographic exposure.
-5. `agents/news_sentiment.py` uses Tavily search to summarize recent news, management changes, regulation, macro context, and sentiment.
-6. `agents/report_writer.py` makes a direct LLM call to synthesize the three research outputs into the final report.
+1. `main.py` starts the CLI, validates required environment variables, streams graph updates, and keeps session memory plus the report cache.
+2. `agents/planner.py` classifies the user's intent, chooses the smallest sufficient specialist-agent set, and decides whether the answer should be a short answer or a five-section report.
+3. `graph.py` resolves the ticker, reuses the last ticker for follow-ups when the planner requests it, checks full-report cache hits, and routes to the selected specialists.
+4. `agents/fundamental.py` uses yfinance tools to summarize financial health.
+5. `agents/business_model.py` uses Tavily search to research revenue model, moat, competitors, and geographic exposure.
+6. `agents/news_sentiment.py` uses Tavily search to summarize recent news, management changes, regulation, macro context, and sentiment.
+7. `agents/report_writer.py` makes a direct LLM call to synthesize the available research outputs into either a short answer or the final five-section report.
+
+The specialist agents are ReAct/tool-using agents. The planner and report writer are direct LLM calls, which keeps routing and synthesis predictable.
 
 ## Project Structure
 
@@ -58,9 +83,11 @@ Company research agent/
 |-- README.md
 |-- ROADMAP.md
 |-- agents/
+|   |-- planner.py
 |   |-- fundamental.py
 |   |-- business_model.py
 |   |-- news_sentiment.py
+|   |-- structured_output.py
 |   `-- report_writer.py
 |-- tools/
 |   |-- yfinance_tools.py
